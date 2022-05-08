@@ -1338,8 +1338,8 @@ Inductive baz : Type :=
   | Baz2 : baz -> bool -> baz.
 
 (** How _many_ elements does the type [baz] have?  (Answer in English
-    or the natural language of your choice.)
+    or the natural language of your choice. *)
 
-(* Ans: Zero. because it doesn't have an initial value. *)
+(** Ans: Zero. because it doesn't have an initial value. *)
 
 (** $Date: 2016-11-02 12:45:52 -0400 (Wed, 02 Nov 2016) $ *)
