@@ -1859,9 +1859,11 @@ Proof.
   intros H.
   assert (H1: P -> False). {
     intros p.
-    apply (or_intro P (P -> False)) in p.
-    apply H in p.
-    inversion p.
+    assert (H2: P \/ (P -> False)). {
+      left. apply p.
+    }
+    apply H in H2.
+    inversion H2.
   }
   assert (H2: P \/ (P -> False)). {
     right. apply H1.
