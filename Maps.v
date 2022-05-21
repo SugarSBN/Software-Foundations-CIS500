@@ -141,7 +141,7 @@ Definition t_empty {A:Type} (v : A) : total_map A :=
     takes [x] to [v] and takes every other key to whatever [m] does. *)
 
 Definition t_update {A:Type} (m : total_map A)
-                    (x : id) (v : A) :=
+                    (x : id) (v : A) : total_map A :=
   fun x' => if beq_id x x' then v else m x'.
 
 (** This definition is a nice example of higher-order programming:
@@ -184,7 +184,9 @@ Proof. reflexivity. Qed.
 
 Lemma t_apply_empty:  forall A x v, @t_empty A v x = v.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, optional (t_update_eq)  *)
@@ -195,7 +197,13 @@ Proof.
 Lemma t_update_eq : forall A (m: total_map A) x v,
   (t_update m x v) x = v.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  unfold t_update.
+  assert (beq_id x x = true). {
+    apply beq_id_true_iff. reflexivity.
+  }
+  rewrite -> H. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, optional (t_update_neq)  *)
@@ -208,8 +216,13 @@ Theorem t_update_neq : forall (X:Type) v x1 x2
   x1 <> x2 ->
   (t_update m x1 v) x2 = m x2.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+    intros.
+    unfold t_update.
+    assert (beq_id x1 x2 = false). {
+        apply beq_id_false_iff. apply H.
+    }
+    rewrite -> H0. reflexivity.
+Qed.
 
 (** **** Exercise: 2 stars, optional (t_update_shadow)  *)
 (** If we update a map [m] at a key [x] with a value [v1] and then
@@ -222,7 +235,14 @@ Lemma t_update_shadow : forall A (m: total_map A) v1 v2 x,
     t_update (t_update m x v1) x v2
   = t_update m x v2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+    intros.
+    apply functional_extensionality.
+    intros.
+    unfold t_update.
+    destruct (beq_id x x0).
+    - reflexivity.
+    - reflexivity.
+Qed.
 (** [] *)
 
 (** For the final two lemmas about total maps, it's convenient to use
@@ -236,7 +256,14 @@ Proof.
 
 Lemma beq_idP : forall x y, reflect (x = y) (beq_id x y).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  apply iff_reflect.
+  split.
+  - intros. apply beq_id_true_iff. apply H.
+  - intros. apply beq_id_true_iff. apply H.
+Qed.
+  
+  
 (** [] *)
 
 (** Now, given [id]s [x1] and [x2], we can use the [destruct (beq_idP
@@ -253,7 +280,16 @@ Proof.
 Theorem t_update_same : forall X x (m : total_map X),
   t_update m x (m x) = m.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  apply functional_extensionality.
+  intros.
+  unfold t_update.
+  remember (beq_id x x0) as b.
+  destruct b.
+  - assert (beq_id x x0 = true). { rewrite <- Heqb. reflexivity. }
+    apply beq_id_true_iff in H. rewrite -> H. reflexivity.
+  - reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, recommended (t_update_permute)  *)
@@ -267,7 +303,28 @@ Theorem t_update_permute : forall (X:Type) v1 v2 x1 x2
     (t_update (t_update m x2 v2) x1 v1)
   = (t_update (t_update m x1 v1) x2 v2).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  apply functional_extensionality.
+  intros.
+  unfold t_update.
+  remember (beq_id x1 x) as b1.
+  remember (beq_id x2 x) as b2.
+  destruct b1.
+  - destruct b2.
+    + assert (beq_id x1 x = true). { rewrite <- Heqb1. reflexivity. }
+      assert (beq_id x2 x = true). { rewrite <- Heqb2. reflexivity. }
+      apply beq_id_true_iff in H0.
+      apply beq_id_true_iff in H1.
+      rewrite <- H0 in H1.
+      unfold not in H.
+      apply H in H1.
+      inversion H1.
+    + reflexivity.
+  - destruct b2.
+    + reflexivity.
+    + reflexivity.
+Qed.
+      
 (** [] *)
 
 (* ################################################################# *)
