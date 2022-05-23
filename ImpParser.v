@@ -124,9 +124,8 @@ Inductive optionE (X:Type) : Type :=
   | SomeE : X -> optionE X
   | NoneE : string -> optionE X.
 
-Implicit Arguments SomeE [[X]].
-Implicit Arguments NoneE [[X]].
-
+Arguments SomeE {X}.
+Arguments NoneE {X}.
 (** Some syntactic sugar to make writing nested match-expressions on
     optionE more convenient. *)
 
