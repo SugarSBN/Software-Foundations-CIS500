@@ -42,3 +42,11 @@ destruct b1.
 - // 这里就有b=true了
 ```
 
+# update: 2022-5-25
+
+Equiv.v里面有个练习的optimize_fold_constants+state懒得做了，和optimize_0plus+state一样的。
+
+但是后面有个 Theorem p5_p6_equiv我觉得是假的啊可恶
+
+因为可能p5 terminate了但是p6并不，这咋整。
+
