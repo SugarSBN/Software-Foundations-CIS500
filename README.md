@@ -50,3 +50,8 @@ Equiv.v里面有个练习的optimize_fold_constants+state懒得做了，和optim
 
 因为可能p5 terminate了但是p6并不，这咋整。
 
+# update:2022-5-28
+
+Hoare.v种repeat...until得hoare triple我写的是对的
+
+但下面那个例子的证明hoare_triple_test写的又臭又长クソ
