@@ -182,7 +182,12 @@
     Example some_term_is_stuck :
       exists t, stuck t.
     Proof.
-      (* FILL IN HERE *) Admitted.
+      exists (tsucc ttrue).
+      split.
+      - unfold step_normal_form. unfold not. intros.
+        inversion H. inversion H0. subst. inversion H2.
+      - unfold not. intros. inversion H. inversion H0. inversion H0. inversion H2.
+    Qed.
     (** [] *)
     
     (** However, although values and normal forms are _not_ the same in this
@@ -194,7 +199,29 @@
     Lemma value_is_nf : forall t,
       value t -> step_normal_form t.
     Proof.
-      (* FILL IN HERE *) Admitted.
+      intros.
+      inversion H.
+      - inversion H0.
+        + unfold step_normal_form. unfold not. intros.
+          inversion H2. inversion H3.
+        + unfold step_normal_form. unfold not. intros.
+          inversion H2. inversion H3.
+      - induction t; try (inversion H0).
+        + unfold step_normal_form. unfold not. intros. inversion H1. inversion H2.
+        + subst. assert (value t). { unfold value. right. assumption. }
+          unfold step_normal_form. unfold not. intros.
+          inversion H3. subst. inversion H4. subst.
+          assert (step_normal_form t). {
+              apply IHt. assumption. assumption.
+          }
+          unfold step_normal_form in H5.
+          assert (exists t', t ==> t'). {
+              exists t1'. apply H6.
+          }
+          apply H5 in H7.
+          inversion H7.
+    Qed.
+          
     
     (** (Hint: You will reach a point in this proof where you need to
         use an induction to reason about a term that is known to be a
@@ -202,7 +229,8 @@
         term itself or over the evidence that it is a numeric value.  The
         proof goes through in either case, but you will find that one way
         is quite a bit shorter than the other.  For the sake of the
-        exercise, try to complete the proof both ways.) *)
+        exercise, try to complete the proof both ways.) 
+        Comments: No way I'm lazy! *)
     (** [] *)
     
     (** **** Exercise: 3 stars, optional (step_deterministic)  *)
@@ -212,7 +240,58 @@
     Theorem step_deterministic:
       deterministic step.
     Proof with eauto.
-      (* FILL IN HERE *) Admitted.
+      unfold deterministic.
+      induction x; try (intros; inversion H; subst).
+      - inversion H0. subst. reflexivity. subst. inversion H0. subst. rewrite <- H1. assumption. subst. inversion H5.
+      - inversion H0. subst. reflexivity. subst. inversion H5.
+      - inversion H0. subst.
+        + inversion H5.
+        + subst. inversion H5.
+        + subst. assert (t1' = t1'0). { apply IHx1. assumption. assumption. }
+          rewrite H1. reflexivity.
+      - inversion H0. subst. assert (t1' = t1'0). {
+          apply IHx. assumption. assumption.
+        }
+        rewrite H1. reflexivity.
+      - inversion H0. subst. reflexivity. subst. inversion H2.
+      - inversion H0. subst. reflexivity. subst.
+        assert (value (tsucc y1)). { right. apply nv_succ. assumption. }
+        apply value_is_nf in H1. unfold step_normal_form in H1.
+        assert (exists t', tsucc y1 ==> t'). { exists t1'. assumption. }
+        apply H1 in H4. inversion H4.
+      - inversion H0. subst.
+        + inversion H2.
+        + subst. assert (value (tsucc y2)). {
+            right. apply nv_succ. assumption.
+        }
+        apply value_is_nf in H1. unfold step_normal_form in H1.
+        assert (exists t', tsucc y2 ==> t'). { exists t1'. assumption. }
+        apply H1 in H4. inversion H4.
+        + subst. assert (t1' = t1'0). {
+            apply IHx. assumption. assumption.
+        }
+        rewrite H1. reflexivity.
+      - inversion H0. subst. reflexivity. subst. inversion H0. subst. inversion H2.
+      - inversion H0. subst. reflexivity. subst.
+        assert (value (tsucc t1)). { right. apply nv_succ. apply H2. }
+        apply value_is_nf in H1. unfold step_normal_form in H1.
+        assert (exists t', tsucc t1 ==> t'). {
+            exists t1'. assumption.
+        }
+        apply H1 in H4. inversion H4.
+      - inversion H0. subst. inversion H2. subst.
+        assert (value (tsucc t1)). {
+            right. apply nv_succ. assumption.
+        }
+        apply value_is_nf in H1. unfold step_normal_form in H1.
+        assert (exists t', tsucc t1 ==> t'). { exists t1'. assumption. }
+        apply H1 in H4. inversion H4.
+        assert (t1' = t1'0). {
+            apply IHx. assumption. assumption.
+        }
+        rewrite H5. reflexivity.
+    Qed.    
+      
     (** [] *)
     
     (* ================================================================= *)
@@ -319,7 +398,11 @@
       |- tsucc t \in TNat ->
       |- t \in TNat.
     Proof.
-      (* FILL IN HERE *) Admitted.
+     intros.
+     inversion H.
+     subst.
+     assumption.
+    Qed.
     (** [] *)
     
     (* ----------------------------------------------------------------- *)
@@ -378,7 +461,25 @@
         + (* t1 can take a step *)
           inversion H as [t1' H1].
           exists (tif t1' t2 t3)...
-      (* FILL IN HERE *) Admitted.
+     - destruct IHHT.
+        + left. destruct H; try (inversion H; subst; inversion HT).
+            -- right. apply nv_succ. apply nv_zero.
+            -- subst. right. apply nv_succ. assumption.
+        + right. inversion H. subst. exists (tsucc x).
+          apply ST_Succ. apply H0.
+     -  destruct IHHT.
+        + inversion H; try (inversion H0; subst; inversion HT).
+            -- right. exists tzero. apply ST_PredZero.
+            -- subst. right. exists t. apply ST_PredSucc. assumption.
+        + right. inversion H. subst. exists (tpred x).
+          apply ST_Pred. assumption.
+     - destruct IHHT.
+        + inversion H; try(inversion H0; subst; inversion HT).
+            -- right. exists (ttrue). apply ST_IszeroZero.
+            -- subst. right. exists tfalse. apply ST_IszeroSucc. assumption.
+        + inversion H. right. exists (tiszero x). apply ST_Iszero. assumption.
+    Qed.
+
     (** [] *)
     
     (** **** Exercise: 3 stars, advanced (finish_progress_informal)  *)
@@ -405,7 +506,7 @@
                 - If [t1] itself can take a step, then, by [ST_If], so can
                   [t].
     
-          - (* FILL IN HERE *)
+          - (* abababababa ~0_0~ *)
     [] *)
     
     (** This theorem is more interesting than the strong progress theorem
@@ -443,7 +544,17 @@
           + (* ST_IfFalse *) assumption.
           + (* ST_If *) apply T_If; try assumption.
             apply IHHT1; assumption.
-        (* FILL IN HERE *) Admitted.
+        - inversion HE; subst; clear HE.
+          + apply T_Succ. apply IHHT in H0. assumption.
+        - inversion HE; subst; clear HE.
+          + apply T_Zero.
+          + inversion HT. assumption.
+          + apply T_Pred. apply IHHT in H0. assumption.
+        - inversion HE; subst; clear HE.
+          + apply T_True.
+          + apply T_False.
+          + apply T_Iszero. apply IHHT in H0. assumption.
+    Qed.
     (** [] *)
     
     (** **** Exercise: 3 stars, advanced (finish_preservation_informal)  *)
@@ -473,7 +584,7 @@
                  by the IH, [|- t1' \in Bool].  The [T_If] rule then gives us
                  [|- if t1' then t2 else t3 \in T], as required.
     
-          - (* FILL IN HERE *)
+          - (* Informal proof is ababababa @#&*@#@*&^# ^_^ *)
     [] *)
     
     (** **** Exercise: 3 stars (preservation_alternate_proof)  *)
@@ -489,7 +600,22 @@
       t ==> t' ->
       |- t' \in T.
     Proof with eauto.
-      (* FILL IN HERE *) Admitted.
+      intros.
+      generalize dependent T.
+      induction H0.
+      - intros. inversion H. subst. assumption.
+      - intros. inversion H. subst. assumption.
+      - intros. inversion H.
+        + subst. apply IHstep in H4. apply T_If. assumption. assumption. assumption.
+      - intros. inversion H. subst.
+        apply IHstep in H2. apply T_Succ. assumption.
+      - intros. inversion H. apply T_Zero.
+      - intros. inversion H0. subst. inversion H2. subst. assumption.
+      - intros. inversion H. subst. apply IHstep in H2. apply T_Pred. assumption.
+      - intros. inversion H. subst. apply T_True.
+      - intros. inversion H0. subst. apply T_False.
+      - intros. inversion H. subst. apply T_Iszero. apply IHstep in H2. assumption.
+    Qed. 
     (** [] *)
     
     (** The preservation theorem is often called _subject reduction_,
@@ -606,7 +732,8 @@
       (P (C 3) (P (C 2) (C 1))) 
       ==>* e'.
     Proof.
-      (* FILL IN HERE *) Admitted.
+      eapply ex_intro. normalize.
+    Qed.
     
     (** **** Exercise: 1 star, optional (normalize_ex')  *)
     (** For comparison, prove it using [apply] instead of [eapply]. *)
@@ -615,7 +742,15 @@
       (P (C 3) (P (C 2) (C 1))) 
       ==>* e'.
     Proof.
-      (* FILL IN HERE *) Admitted.
+      exists (C 6).
+      apply multi_step with (P (C 3) (C 3)).
+      apply ST_Plus2. 
+      apply v_const.
+      apply ST_PlusConstConst.
+      apply multi_step with (C 6).
+      apply ST_PlusConstConst.
+      apply multi_refl.
+    Qed.
     (** [] *)
     
     End NormalizePlayground.
@@ -636,10 +771,24 @@
         also holds.  That is, is it always the case that, if [t ==> t']
         and [|- t' \in T], then [|- t \in T]?  If so, prove it.  If
         not, give a counter-example.  (You do not need to prove your
-        counter-example in Coq, but feel free to do so.)
+        counter-example in Coq, but feel free to do so.) *)
+
+    (** No! *)
+    Theorem subject_expansion_inv : 
+        exists t t' T, ~(|- t' \in T -> t ==> t' -> |- t \in T).
+    Proof.
+        exists (tif ttrue ttrue tzero).
+        exists ttrue.
+        exists TBool.
+        unfold not.
+        intros.
+        assert (|- tif ttrue ttrue tzero \in TBool). {
+            apply H. apply T_True. apply ST_IfTrue.
+        }
+        inversion H0. subst. inversion H7.
+    Qed.
+
     
-        (* FILL IN HERE *)
-    [] *)
     
     (** **** Exercise: 2 stars (variation1)  *)
     (** Suppose, that we add this new rule to the typing relation:
@@ -653,11 +802,19 @@
        else "becomes false." If a property becomes false, give a
        counterexample.
           - Determinism of [step]
-    
+            remains true
+
           - Progress
-    
+            becomes false
+            since (succ ttrue) : tm is not value
+            and cannot be induced.
+            initially we don't have |- (succ ttrue) \in T
+            but we have it now. So theorem progress failed.
+
           - Preservation
-    
+            remains true
+
+          
     [] *)
     
     (** **** Exercise: 2 stars (variation2)  *)
@@ -668,7 +825,10 @@
     
        Which of the above properties become false in the presence of
        this rule?  For each one that does, give a counter-example.
-    
+       
+       determinism, since tif ttrue t2 t3 could ==> t2 and ==> t3.
+       preservation also becomes false in that
+        tif ttrue tzero ttrue can be typed as nat and bool.
     [] *)
     
     (** **** Exercise: 2 stars, optional (variation3)  *)
@@ -680,7 +840,8 @@
     
        Which of the above properties become false in the presence of
        this rule?  For each one that does, give a counter-example.
-    
+
+       Isn't this rule true? I think it's totally ok...
     [] *)
     
     (** **** Exercise: 2 stars, optional (variation4)  *)
@@ -691,7 +852,8 @@
     
        Which of the above properties become false in the presence of
        this rule?  For each one that does, give a counter-example.
-    
+
+       damn, it sucks.
     [] *)
     
     (** **** Exercise: 2 stars, optional (variation5)  *)
@@ -702,7 +864,8 @@
     
        Which of the above properties become false in the presence of
        this rule?  For each one that does, give a counter-example.
-    
+      
+       bu xiang wan le
     [] *)
     
     (** **** Exercise: 2 stars, optional (variation6)  *)
@@ -714,6 +877,7 @@
        Which of the above properties become false in the presence of
        this rule?  For each one that does, give a counter-example.
     
+       moo~
     [] *)
     
     (** **** Exercise: 3 stars, optional (more_variations)  *)
@@ -738,7 +902,7 @@
         What are the appropriate analogs of the progress and preservation
         properties?  (You do not need to prove them.)
     
-    (* FILL IN HERE *)
+    (* abababa *)
     [] *)
     
     (** $Date: 2016-11-15 07:03:23 -0500 (Tue, 15 Nov 2016) $ *)
