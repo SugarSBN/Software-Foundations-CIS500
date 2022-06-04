@@ -655,7 +655,12 @@ Require Import Stlc.
            else if (pred x)=0 then 0
            else 1 + (halve (pred (pred x))))
 
-(* FILL IN HERE *)
+(* 
+    F = \f \x -> if x = 0 then 0 else
+        if (pred x) = 0 then 0
+        else 1 + (f (pred (pred x)))
+    fix F 
+*)
 []
 *)
 
@@ -664,7 +669,16 @@ Require Import Stlc.
     through to reduce to a normal form (assuming the usual reduction
     rules for arithmetic operations).
 
-    (* FILL IN HERE *)
+    (* 
+    fix F 1 ==>
+    \x -> if x = 0 then 1 else x * (fix F (pred x)) 1 ==>
+    if 1 = 0 then 1 else 1 * (fix F (pred 1)) ==>
+    1 * (fix F (pred 1)) ==>
+    1 * (fix F 0) ==>
+    1 * ((\x -> if x = 0 then 1 else x * (fix F (pred x))) 0) ==>
+    1 * (if 0 = 0 then 1 else 0 * (fix F (pred 0))) ==>
+    1 * 1 ==> 1
+    *)
 []
 *)
 
@@ -1011,9 +1025,16 @@ Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
       tmult (subst x s t1) (subst x s t2)
   | tif0 t1 t2 t3 =>
       tif0 (subst x s t1) (subst x s t2) (subst x s t3)
-  (* FILL IN HERE *)
+  | tpair t1 t2 =>
+      tpair (subst x s t1) (subst x s t2)
+  | tfst t1 =>
+      tfst (subst x s t1)
+  | tsnd t1 =>
+      tsnd (subst x s t1)
   | tunit => tunit
-  (* FILL IN HERE *)
+  | tlet x1 s1 t1 =>
+      if (beq_id x x1) then (tlet x1 (subst x s s1) t1) else
+      (tlet x1 (subst x s s1) (subst x s t1))
   | tinl T t1 =>
       tinl T (subst x s t1)
   | tinr T t1 =>
@@ -1032,8 +1053,7 @@ Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
            t3
          else if beq_id x y2 then t3
               else (subst x s t3))
-  (* FILL IN HERE *)
-  | _ => t  (* ... and delete this line *)
+  | tfix t1=> tfix (subst x s t1)
   end.
 
 Notation "'[' x ':=' s ']' t" := (subst x s t) (at level 20).
@@ -1115,9 +1135,32 @@ Inductive step : tm -> tm -> Prop :=
   | ST_If0Nonzero : forall n t2 t3,
        (tif0 (tnat (S n)) t2 t3) ==> t3
   (* pairs *)
-  (* FILL IN HERE *)
+  | ST_Pair1 : forall t1 t2 t1',
+        t1 ==> t1' ->
+        (tpair t1 t2) ==> (tpair t1' t2)
+  | ST_Pair2 : forall t1 t2 t2',
+        value t1 ->
+        t2 ==> t2' ->
+        (tpair t1 t2) ==> (tpair t1 t2')
+  | ST_Fst1 : forall t t',
+        t ==> t' ->
+        (tfst t) ==> (tfst t')
+  | ST_FstPair : forall t t',
+        value t -> value t' ->
+        (tfst (tpair t t')) ==> t
+  | ST_Snd1 : forall t t',
+        t ==> t' ->
+        (tsnd t) ==> (tsnd t')
+  | ST_SndPair : forall t t',
+        value t -> value t' ->
+        (tsnd (tpair t t')) ==> t'
   (* let *)
-  (* FILL IN HERE *)
+  | ST_Let1 : forall x t t' t1,
+        t ==> t' ->
+        (tlet x t t1) ==> (tlet x t' t1)
+  | ST_LetValue : forall x t t1,
+        value t ->
+        (tlet x t t1) ==> [x := t] t1
   (* sums *)
   | ST_Inl : forall t1 t1' T,
         t1 ==> t1' ->
@@ -1152,7 +1195,11 @@ Inductive step : tm -> tm -> Prop :=
        value vl  ->
        (tlcase (tcons v1 vl) t2 x1 x2 t3) ==> (subst x2 vl (subst x1 v1 t3))
   (* fix *)
-  (* FILL IN HERE *)
+  | ST_Fix1 : forall t t',
+       t ==> t' ->
+       (tfix t) ==> (tfix t')
+  | ST_FixAbs : forall x T t,
+       (tfix (tabs x T t)) ==> ([x := (tfix (tabs x T t))] t)
 
 where "t1 '==>' t2" := (step t1 t2).
 
@@ -1202,12 +1249,24 @@ Inductive has_type : context -> tm -> ty -> Prop :=
       Gamma |- t3 \in T1 ->
       Gamma |- (tif0 t1 t2 t3) \in T1
   (* pairs *)
-  (* FILL IN HERE *)
+  | T_Pair : forall Gamma t1 T1 t2 T2,
+      Gamma |- t1 \in T1 ->
+      Gamma |- t2 \in T2 ->
+      Gamma |- (tpair t1 t2) \in (TProd T1 T2)
+  | T_Fst : forall Gamma t T1 T2,
+      Gamma |- t \in (TProd T1 T2) ->
+      Gamma |- (tfst t) \in T1
+  | T_Snd : forall Gamma t T1 T2,
+      Gamma |- t \in (TProd T1 T2) ->
+      Gamma |- (tsnd t) \in T2
   (* unit *)
   | T_Unit : forall Gamma,
       Gamma |- tunit \in TUnit
   (* let *)
-  (* FILL IN HERE *)
+  | T_Let : forall Gamma t1 T1 x t2 T2,
+      Gamma |- t1 \in T1 ->
+      (update Gamma x T1) |- t2 \in T2 ->
+      Gamma |- (tlet x t1 t2) \in T2
   (* sums *)
   | T_Inl : forall Gamma t1 T1 T2,
       Gamma |- t1 \in T1 ->
@@ -1233,7 +1292,9 @@ Inductive has_type : context -> tm -> ty -> Prop :=
       (update (update Gamma x2 (TList T1)) x1 T1) |- t3 \in T2 ->
       Gamma |- (tlcase t1 t2 x1 x2 t3) \in T2
   (* fix *)
-  (* FILL IN HERE *)
+  | T_Fix : forall Gamma t T, 
+      Gamma |- t \in (TArrow T T) ->
+      Gamma |- (tfix t) \in T
 
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
@@ -1257,6 +1318,7 @@ Module Examples.
 (** *** Preliminaries *)
 
 (** First, let's define a few variable names: *)
+Require Import String.
 
 Notation x := (Id "x").
 Notation y := (Id "y").
@@ -1317,7 +1379,7 @@ Definition test :=
 (** Remove the comment braces once you've implemented enough of the
     definitions that you think this should work. *)
 
-(* 
+
 Example typechecks :
   empty |- test \in TNat.
 Proof.
@@ -1333,7 +1395,7 @@ Example numtest_reduces :
 Proof.
   unfold test. normalize.
 Qed.
-*)
+
 
 End Numtest.
 
@@ -1352,7 +1414,7 @@ Definition test :=
           (tnat 6))
         (tnat 7))).
 
-(* 
+
 Example typechecks :
   empty |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
@@ -1360,7 +1422,7 @@ Proof. unfold test. eauto 15. Qed.
 Example reduces :
   test ==>* tnat 6.
 Proof. unfold test. normalize. Qed.
-*)
+
 
 End Prodtest.
 
@@ -1376,7 +1438,7 @@ Definition test :=
     (tpred (tnat 6))
     (tsucc (tvar x)).
 
-(* 
+
 Example typechecks :
   empty |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
@@ -1384,7 +1446,7 @@ Proof. unfold test. eauto 15. Qed.
 Example reduces :
   test ==>* tnat 6.
 Proof. unfold test. normalize. Qed.
-*)
+
 
 End LetTest.
 
@@ -1402,7 +1464,7 @@ Definition test :=
     x (tvar x)
     y (tvar y).
 
-(* 
+ 
 Example typechecks :
   empty |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
@@ -1410,7 +1472,7 @@ Proof. unfold test. eauto 15. Qed.
 Example reduces :
   test ==>* (tnat 5).
 Proof. unfold test. normalize. Qed.
-*)
+
 
 End Sumtest1.
 
@@ -1434,7 +1496,7 @@ Definition test :=
       (tapp (tvar processSum) (tinl TNat (tnat 5)))
       (tapp (tvar processSum) (tinr TNat (tnat 5)))).
 
-(* 
+
 Example typechecks :
   empty |- test \in (TProd TNat TNat).
 Proof. unfold test. eauto 15. Qed.
@@ -1442,7 +1504,7 @@ Proof. unfold test. eauto 15. Qed.
 Example reduces :
   test ==>* (tpair (tnat 5) (tnat 0)).
 Proof. unfold test. normalize. Qed.
-*)
+
 
 End Sumtest2.
 
@@ -1463,7 +1525,7 @@ Definition test :=
        (tnat 0)
        x y (tmult (tvar x) (tvar x))).
 
-(* 
+
 Example typechecks :
   empty |- test \in TNat.
 Proof. unfold test. eauto 20. Qed.
@@ -1471,7 +1533,7 @@ Proof. unfold test. eauto 20. Qed.
 Example reduces :
   test ==>* (tnat 25).
 Proof. unfold test. normalize. Qed.
-*)
+
 
 End ListTest.
 
@@ -1498,18 +1560,18 @@ Definition fact :=
 (** (Warning: you may be able to typecheck [fact] but still have some
     rules wrong!) *)
 
-(* 
+
 Example fact_typechecks :
   empty |- fact \in (TArrow TNat TNat).
 Proof. unfold fact. auto 10.
 Qed.
-*)
 
-(* 
+
+ 
 Example fact_example:
   (tapp fact (tnat 4)) ==>* (tnat 24).
 Proof. unfold fact. normalize. Qed.
-*)
+
 
 End FixTest1.
 
@@ -1533,7 +1595,7 @@ Definition map :=
             a l (tcons (tapp (tvar g) (tvar a))
                          (tapp (tvar f) (tvar l))))))).
 
-(* 
+
 (* Make sure you've uncommented the last [Hint Extern] above... *)
 Example map_typechecks :
   empty |- map \in
@@ -1547,7 +1609,7 @@ Example map_example :
          (tcons (tnat 1) (tcons (tnat 2) (tnil TNat)))
   ==>* (tcons (tnat 2) (tcons (tnat 3) (tnil TNat))).
 Proof. unfold map. normalize. Qed.
-*)
+
 
 End FixTest2.
 
@@ -1574,24 +1636,24 @@ Definition equal :=
                               (tpred (tvar m)))
                       (tpred (tvar n)))))))).
 
-(* 
+ 
 Example equal_typechecks :
   empty |- equal \in (TArrow TNat (TArrow TNat TNat)).
 Proof. unfold equal. auto 10.
 Qed.
-*)
 
-(* 
+
+ 
 Example equal_example1:
   (tapp (tapp equal (tnat 4)) (tnat 4)) ==>* (tnat 1).
 Proof. unfold equal. normalize. Qed.
-*)
 
-(* 
+
+
 Example equal_example2:
   (tapp (tapp equal (tnat 4)) (tnat 5)) ==>* (tnat 0).
 Proof. unfold equal. normalize. Qed.
-*)
+
 
 End FixTest3.
 
@@ -1627,18 +1689,18 @@ Definition eotest :=
     (tapp (tvar even) (tnat 3))
     (tapp (tvar even) (tnat 4))))).
 
-(* 
+ 
 Example eotest_typechecks :
   empty |- eotest \in (TProd TNat TNat).
 Proof. unfold eotest. eauto 30.
 Qed.
-*)
 
-(* 
+
+ 
 Example eotest_example1:
   eotest ==>* (tpair (tnat 0) (tnat 1)).
 Proof. unfold eotest. normalize. Qed.
-*)
+
 
 End FixTest4.
 
@@ -1749,11 +1811,34 @@ Proof with eauto.
     + (* t1 steps *)
       inversion H as [t1' H0].
       exists (tif0 t1' t2 t3)...
-  (* FILL IN HERE *)
+  - (* T_Pair*)
+    assert (value t2 \/ (exists t' : tm, t2 ==> t')). { apply IHHt2. reflexivity. }
+    assert (value t1 \/ (exists t' : tm, t1 ==> t')). { apply IHHt1. reflexivity. }
+    destruct H0.
+    + destruct H. 
+        -- left. apply v_pair. assumption. assumption.
+        -- right. inversion H. exists (tpair t1 x). apply ST_Pair2. assumption. assumption.
+    + inversion H0. right. exists (tpair x t2). apply ST_Pair1. assumption.
+  - (* T_Fst *)
+    assert (value t \/ (exists t' : tm, t ==> t')). { apply IHHt. reflexivity. }
+    destruct H.
+    + inversion Ht; subst; try (inversion H).
+      subst. right. exists t1. apply ST_FstPair. assumption. assumption.
+    + inversion H. right. exists (tfst x). apply ST_Fst1. assumption.
+  - (* T_Snd *)
+    assert (value t \/ (exists t' : tm, t ==> t')). { apply IHHt. reflexivity. }
+    destruct H.
+    + inversion Ht; subst; try (inversion H).
+        subst. right. exists t2. apply ST_SndPair. assumption. assumption.
+    + inversion H. right. exists (tsnd x). apply ST_Snd1. assumption.
   - (* T_Unit *)
     left...
   (* let *)
-  (* FILL IN HERE *)
+  - (* T_Let *)
+    assert (value t1 \/ (exists t' : tm, t1 ==> t')). { apply IHHt1. reflexivity. }
+    destruct H.
+    + right. exists ([x := t1] t2). apply ST_LetValue. assumption.
+    + right. inversion H. exists (tlet x x0 t2). apply ST_Let1. assumption.
   - (* T_Inl *)
     destruct IHHt...
     + (* t1 steps *)
@@ -1801,7 +1886,13 @@ Proof with eauto.
       inversion H as [t1' Hstp].
       exists (tlcase t1' t2 x1 x2 t3)...
   (* fix *)
-  (* FILL IN HERE *)
+  - (* T_Fix *)
+    assert (value t \/ (exists t' : tm, t ==> t')). { apply IHHt. reflexivity. }
+    destruct H. inversion H; subst; try (inversion Ht); subst.
+    + right. exists ([x := (tfix (tabs x T t12))] t12). {
+        apply ST_FixAbs.
+    }
+    + inversion H. right. exists (tfix x). apply ST_Fix1. assumption. 
 Qed.
 
 (* ----------------------------------------------------------------- *)
@@ -1841,9 +1932,23 @@ Inductive appears_free_in : id -> tm -> Prop :=
      appears_free_in x t3 ->
      appears_free_in x (tif0 t1 t2 t3)
   (* pairs *)
-  (* FILL IN HERE *)
+  | afi_pair : forall x t1 t2,
+     appears_free_in x t1 \/ appears_free_in x t2 ->
+     appears_free_in x (tpair t1 t2)
+  | afi_fst : forall x t,
+     appears_free_in x t ->
+     appears_free_in x (tfst t)
+  | afi_snd : forall x t,
+     appears_free_in x t ->
+     appears_free_in x (tsnd t)
   (* let *)
-  (* FILL IN HERE *)
+  | afi_let1 : forall x s t y,
+     appears_free_in y s ->
+     appears_free_in y (tlet x s t)
+  | afi_let2 : forall x s t y,
+     x <> y ->
+     appears_free_in y t ->
+     appears_free_in y (tlet x s t)
   (* sums *)
   | afi_inl : forall x t T,
       appears_free_in x t ->
@@ -1881,7 +1986,9 @@ Inductive appears_free_in : id -> tm -> Prop :=
      appears_free_in x t3 ->
      appears_free_in x (tlcase t1 t2 y1 y2 t3)
   (* fix *)
-  (* FILL IN HERE *)
+  | afi_fix : forall x t,
+     appears_free_in x t ->
+     appears_free_in x (tfix t)
 .
 
 Hint Constructors appears_free_in.
@@ -1905,9 +2012,27 @@ Proof with eauto.
   - (* T_If0 *)
     apply T_If0...
   (* pair *)
-  (* FILL IN HERE *)
+  - apply T_Pair.
+    + apply IHhas_type1. intros.
+      assert (appears_free_in x (tpair t1 t2)). { apply afi_pair. left. assumption. }
+      apply Heqv in H2. assumption.
+    + apply IHhas_type2. intros.
+      assert (appears_free_in x (tpair t1 t2)). { apply afi_pair. right. assumption. }
+      apply Heqv in H2. assumption.
   (* let *)
-  (* FILL IN HERE *)
+  - apply (T_Let Gamma' t1 T1 x t2 T2).
+    + apply IHhas_type1. intros.
+      assert (appears_free_in x0 (tlet x t1 t2)). {
+        apply afi_let1. assumption. 
+      }
+      apply Heqv in H2. assumption.
+    + apply IHhas_type2. intros. 
+      unfold update. unfold t_update.
+      destruct (beq_id x x0) eqn: eq.
+      -- reflexivity.
+      -- apply Heqv. apply afi_let2. 
+        ++ apply beq_id_false_iff. assumption.
+        ++ assumption.
   - (* T_Case *)
     eapply T_Case...
     + apply IHhas_type2. intros y Hafi.
@@ -1936,8 +2061,14 @@ Proof with eauto.
     destruct IHHtyp as [T' Hctx]... exists T'.
     unfold update, t_update in Hctx.
     rewrite false_beq_id in Hctx...
-  (* let *)
-  (* FILL IN HERE *)
+  (* pair *)
+  - destruct H1.
+    + apply IHHtyp1. assumption.
+    + apply IHHtyp2. assumption.
+  - (* let *)
+    apply IHHtyp2 in H4. inversion H4.
+    exists x1. unfold update in H. unfold t_update in H. apply beq_id_false_iff in H2.
+    rewrite H2 in H. assumption.  
   (* T_Case *)
   - (* left *)
     destruct IHHtyp2 as [T' Hctx]... exists T'.
@@ -2040,7 +2171,26 @@ Proof with eauto.
       subst.
       rewrite false_beq_id...
   (* let *)
-  (* FILL IN HERE *)
+  - destruct (beq_id x i) eqn: eq.
+    + assert (x = i). { apply beq_id_true_iff. assumption. }
+      subst. 
+      apply (T_Let Gamma ([i := v] t1) T1 i t2 S).
+      apply IHt1. assumption.
+      apply (context_invariance (update (update Gamma i U) i T1) (update Gamma i T1) t2 S).
+      assumption.
+      intros. unfold update. unfold t_update.
+      destruct (beq_id i x) eqn: eq1.
+      -- reflexivity.
+      -- reflexivity.
+    + apply (T_Let Gamma ([x := v] t1) T1 i ([x := v] t2) S).
+      -- apply IHt1. assumption.
+      -- apply IHt2. apply (context_invariance (update (update Gamma x U) i T1) (update (update Gamma i T1) x U) t2 S).
+         assumption.
+         intros.
+         unfold update. unfold t_update.
+         destruct (beq_id i x0) eqn: eq1.
+         ++ apply beq_id_true_iff in eq1. subst. rewrite eq. reflexivity.
+         ++ reflexivity.      
   - (* tcase *)
     rename i into x1. rename i0 into x2.
     eapply T_Case...
@@ -2135,9 +2285,12 @@ Proof with eauto.
       apply substitution_preserves_typing with T1...
       inversion HT1...
   (* fst and snd *)
-  (* FILL IN HERE *)
+  - inversion HT. subst. assumption.
+  - inversion HT. subst. assumption.
   (* let *)
-  (* FILL IN HERE *)
+  - apply (substitution_preserves_typing empty x T1 t1 t2).
+    assumption.
+    assumption.
   (* T_Case *)
   - (* ST_CaseInl *)
     inversion HT1; subst.
@@ -2151,7 +2304,9 @@ Proof with eauto.
       apply substitution_preserves_typing with (TList T1)...
       apply substitution_preserves_typing with T1...
   (* fix *)
-  (* FILL IN HERE *)
+  - apply (substitution_preserves_typing empty x T (tfix (tabs x T0 t0)) t0 T).
+    +  inversion HT. subst. assumption.
+    + apply T_Fix. assumption. 
 Qed.
 (** [] *)
 

@@ -55,3 +55,11 @@ Equiv.v里面有个练习的optimize_fold_constants+state懒得做了，和optim
 Hoare.v种repeat...until得hoare triple我写的是对的
 
 但下面那个例子的证明hoare_triple_test写的又臭又长クソ
+
+# update:2022-6-4
+
+MoreStlc.v
+
+又难又有意思
+
+其中关于let语句改了多次
