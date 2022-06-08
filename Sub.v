@@ -344,8 +344,12 @@ Require Import Smallstep.
     execution.  (Use informal syntax.  No need to prove formally that 
     the application gets stuck.)
 
-[] *)
+    Answer: f = \s : Student => s.gpa
+            g = \f : (Person -> Nat) => f (Person A)
+            then (g f) is ((\s => s.gpa) (Person A)).
+            since Person A don't have gpa,  it gets stuck.
 
+[] *)
 (* ----------------------------------------------------------------- *)
 (** *** Top *)
 
@@ -419,19 +423,23 @@ Require Import Smallstep.
     are then true?  Write _true_ or _false_ after each one.
     ([A], [B], and [C] here are base types like [Bool], [Nat], etc.)
 
-    - [T->S <: T->S]
+    - [T->S <: T->S] true
 
-    - [Top->U <: S->Top]
+    - [Top->U <: S->Top] true, S <: Top, U <: Top
 
-    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)]
+    - [(C->C) -> (A*B)  <:  (C->C) -> (Top*B)] true, (C->C) <: (C->C), (A*B) <: (Top*B)
 
-    - [T->T->U <: S->S->V]
+    - [T->T->U <: S->S->V] true, S <: T, (T->U) <: (S->V)
 
-    - [(T->T)->U <: (S->S)->V]
+    - [(T->T)->U <: (S->S)->V] false. ~((S->S) <: (T->T))
 
-    - [((T->S)->T)->U <: ((S->T)->S)->V]
+    - [((T->S)->T)->U <: ((S->T)->S)->V] true
+      ((S->T)->S) <: ((T->S)->T),
+        (T->S) <: (S->T),
+        S <: T
+      U <: V
 
-    - [S*V <: T*U]
+    - [S*V <: T*U] true
 
 [] *)
 
@@ -444,9 +452,15 @@ Require Import Smallstep.
     - [Person -> Student]
 
 Write these types in order from the most specific to the most general.
-
+  1. Top -> Student <:
+  2. Person -> Student <:
+  3. Student -> Person <:
+  4. Student -> Top <:
+  5. Top
 Where does the type [Top->Top->Student] fit into this order?
-
+ after 1. 
+ since (Top -> Top) <: Top,
+ (Top -> Student) <: ((Top->Top)->Student)
 [] *)
 
 (** **** Exercise: 1 star (subtype_instances_tf_2)  *)
@@ -455,58 +469,74 @@ Where does the type [Top->Top->Student] fit into this order?
 
       forall S T,
           S <: T  ->
-          S->S   <:  T->T
+          S->S   <:  T->T 
+      false!
 
       forall S,
            S <: A->A ->
            exists T,
               S = T->T  /\  T <: A
+      true! T = A.
 
       forall S T1 T2,
            (S <: T1 -> T2) ->
            exists S1 S2,
               S = S1 -> S2  /\  T1 <: S1  /\  S2 <: T2 
+      false? S can be tunit, but here I'm not sure whether we have tunit...
 
       exists S,
            S <: S->S 
+      false!
 
       exists S,
            S->S <: S  
+      true! S = Top
 
       forall S T1 T2,
            S <: T1*T2 ->
            exists S1 S2,
               S = S1*S2  /\  S1 <: T1  /\  S2 <: T2  
+      false? S can be tunit
 
 [] *)
 
 (** **** Exercise: 1 star (subtype_concepts_tf)  *)
 (** Which of the following statements are true, and which are false?
     - There exists a type that is a supertype of every other type.
+      I think true, since we can define it as Top
 
     - There exists a type that is a subtype of every other type.
+      I think true, since we can define it as \perp,or (void somehow)
 
     - There exists a pair type that is a supertype of every other
       pair type.
+      I think true
 
     - There exists a pair type that is a subtype of every other
       pair type.
+      I think true
 
     - There exists an arrow type that is a supertype of every other
       arrow type.
+      I think true, Unit->Top
 
     - There exists an arrow type that is a subtype of every other
       arrow type.
+      I think true, Top->Unit
 
     - There is an infinite descending chain of distinct types in the
       subtype relation---that is, an infinite sequence of types
       [S0], [S1], etc., such that all the [Si]'s are different and
       each [S(i+1)] is a subtype of [Si].
+      Emmmm...
+      I think yes, since you can add information to Si and get S(i+1)
 
     - There is an infinite _ascending_ chain of distinct types in
       the subtype relation---that is, an infinite sequence of types
       [S0], [S1], etc., such that all the [Si]'s are different and
       each [S(i+1)] is a supertype of [Si].
+      I think not, since the information in S0 is finite, and you cannot
+      erase information infinitely and get infinite supertypes.
 
 [] *)
 
@@ -521,6 +551,8 @@ Where does the type [Top->Top->Student] fit into this order?
          exists S,
             S <: T  /\  S <> T
 
+    I think true.
+
 [] *)
 
 
@@ -533,9 +565,13 @@ Where does the type [Top->Top->Student] fit into this order?
 
        empty |- (\p:T*Top. p.fst) ((\z:A.z), unit) : A->A
 
-
+       empty |- (\p:T*Top. p.fst) : (T*Top)->T
+       empty |- ((\z:A.z), unit) : (A->A)*Unit
+     
+     T = A->A
    - What is the _largest_ type [T] that makes the same assertion true?
-
+     T = A->A
+     
 [] *)
 
 (** **** Exercise: 2 stars (small_large_2)  *)
@@ -544,10 +580,13 @@ Where does the type [Top->Top->Student] fit into this order?
      assertion true?
 
        empty |- (\p:(A->A * B->B). p) ((\z:A.z), (\z:B.z)) : T
-
+       
+       empty |- (\p:(A->A * B->B). p) : (A->A * B->B) -> (A->A * B->B)
+       empty |- ((\z:A .z), (\z:B.z)) : (A->A) * (B->B)
+     T = (A->A * B->B)
 
    - What is the _largest_ type [T] that makes the same assertion true?
-
+     T = Top
 [] *)
 
 (** **** Exercise: 2 stars, optional (small_large_3)  *)
@@ -557,9 +596,13 @@ Where does the type [Top->Top->Student] fit into this order?
 
        a:A |- (\p:(A*T). (p.snd) (p.fst)) (a , \z:A.z) : A
 
+       a:A |- (\p:(A*T). (p.snd) (p.fst)) : (A*T)->(T A)
+       a:A |- (a, \z:A.z) : A*(A->A)
+
+       T = A->A
 
    - What is the _largest_ type [T] that makes the same assertion true?
-
+     T=A->A
 [] *)
 
 (** **** Exercise: 2 stars (small_large_4)  *)
@@ -570,9 +613,14 @@ Where does the type [Top->Top->Student] fit into this order?
        exists S,
          empty |- (\p:(A*T). (p.snd) (p.fst)) : S
 
+     ((A*T)->(T A)) <: S
+
+     T = A->Unit,
+     Then always exists (Unit->Top), (A*T)->Unit <: (Unit->Top)
 
    - What is the _largest_ type [T] that makes the same
      assertion true?
+     T = A -> Top
 
 [] *)
 
@@ -582,7 +630,7 @@ Where does the type [Top->Top->Student] fit into this order?
 
       exists S, exists t,
         empty |- (\x:T. x x) t : S
-]] 
+      T = A->A ? A is a specific type
 [] *)
 
 (** **** Exercise: 2 stars (smallest_2)  *)
@@ -590,7 +638,7 @@ Where does the type [Top->Top->Student] fit into this order?
     assertion true?
 
       empty |- (\x:Top. x) ((\z:A.z) , (\z:B.z)) : T
-]] 
+    I don't know.
 [] *)
 
 (** **** Exercise: 3 stars, optional (count_supertypes)  *)
@@ -599,6 +647,8 @@ Where does the type [Top->Top->Student] fit into this order?
     T]?  (We consider two types to be different if they are written
     differently, even if each is a subtype of the other.  For example,
     [{x:A,y:B}] and [{y:B,x:A}] are different.)
+    
+    that depends on how may supertypes does A have.
 
 [] *)
 
@@ -616,7 +666,10 @@ Where does the type [Top->Top->Student] fit into this order?
                                    T1*T2 <: T2*T1
 
     for products.  Is this a good idea? Briefly explain why or why not.
-
+    
+    Ans: it is valid but not reasonable. T1*T2 and T2*T1 contains equal
+         amount of information, so they can be subtypes of each other.
+         However, this is meaningless.  
 [] *)
 
 (* ################################################################# *)
@@ -763,82 +816,6 @@ where "T '<:' U" := (subtype T U).
 
 Hint Constructors subtype.
 
-Module Examples.
-
-Notation x := (Id "x").
-Notation y := (Id "y").
-Notation z := (Id "z").
-
-Notation A := (TBase (Id "A")).
-Notation B := (TBase (Id "B")).
-Notation C := (TBase (Id "C")).
-
-Notation String := (TBase (Id "String")).
-Notation Float := (TBase (Id "Float")).
-Notation Integer := (TBase (Id "Integer")).
-
-Example subtyping_example_0 :
-  (TArrow C TBool) <: (TArrow C TTop).
-  (* C->Bool <: C->Top *)
-Proof. auto. Qed.
-
-(** **** Exercise: 2 stars, optional (subtyping_judgements)  *)
-(** (Wait to do this exercise after you have added product types to the
-    language -- see exercise [products] -- at least up to this point 
-    in the file).
-
-    Recall that, in chapter [MoreStlc], the optional section "Encoding
-    Records" describes how records can be encoded as pairs.
-    Using this encoding, define pair types representing the following 
-    record types:
-
-    Person   := { name : String }
-    Student  := { name : String ;
-                  gpa  : Float }
-    Employee := { name : String ;
-                  ssn  : Integer }
-*)
-Definition Person : ty 
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-Definition Student : ty 
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-Definition Employee : ty 
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-
-(** Now use the definition of the subtype relation to prove the following: *)
-
-Example sub_student_person :
-  Student <: Person.
-Proof.
-(* FILL IN HERE *) Admitted.
-
-Example sub_employee_person :
-  Employee <: Person.
-Proof.
-(* FILL IN HERE *) Admitted.
-(** [] *)
-
-(** The following facts are mostly easy to prove in Coq.  To get
-    full benefit from the exercises, make sure you also
-    understand how to prove them on paper! *)
-
-(** **** Exercise: 1 star, optional (subtyping_example_1)  *)
-Example subtyping_example_1 :
-  (TArrow TTop Student) <: (TArrow (TArrow C C) Person).
-  (* Top->Student <: (C->C)->Person *)
-Proof with eauto.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-(** **** Exercise: 1 star, optional (subtyping_example_2)  *)
-Example subtyping_example_2 :
-  (TArrow TTop Person) <: (TArrow Person TTop).
-  (* Top->Person <: Person->Top *)
-Proof with eauto.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
-
-End Examples.
 
 (* ================================================================= *)
 (** ** Typing *)
@@ -890,33 +867,7 @@ Hint Extern 2 (has_type _ (tapp _ _) _) =>
   eapply T_App; auto.
 Hint Extern 2 (_ = _) => compute; reflexivity.
 
-Module Examples2.
-Import Examples.
 
-(** Do the following exercises after you have added product types to
-    the language.  For each informal typing judgement, write it as a
-    formal statement in Coq and prove it. *)
-
-(** **** Exercise: 1 star, optional (typing_example_0)  *)
-(* empty |- ((\z:A.z), (\z:B.z))
-          : (A->A * B->B) *)
-(* FILL IN HERE *)
-(** [] *)
-
-(** **** Exercise: 2 stars, optional (typing_example_1)  *)
-(* empty |- (\x:(Top * B->B). x.snd) ((\z:A.z), (\z:B.z))
-          : B->B *)
-(* FILL IN HERE *)
-(** [] *)
-
-(** **** Exercise: 2 stars, optional (typing_example_2)  *)
-(* empty |- (\z:(C->C)->(Top * B->B). (z (\x:C.x)).snd)
-              (\z:C->C. ((\z:A.z), (\z:B.z)))
-          : B->B *)
-(* FILL IN HERE *)
-(** [] *)
-
-End Examples2.
 
 (* ################################################################# *)
 (** * Properties *)
@@ -952,7 +903,12 @@ Lemma sub_inversion_Bool : forall U,
 Proof with auto.
   intros U Hs.
   remember TBool as V.
-  (* FILL IN HERE *) Admitted.
+  induction Hs.
+  - reflexivity.
+  - subst. assert (TBool = TBool). { reflexivity. } apply IHHs2 in H. rewrite <- H. apply IHHs1 in H. assumption.
+  - inversion HeqV.
+  - inversion HeqV.
+Qed.  
 
 (** **** Exercise: 3 stars, optional (sub_inversion_arrow)  *)
 Lemma sub_inversion_arrow : forall U V1 V2,
@@ -963,7 +919,24 @@ Proof with eauto.
   intros U V1 V2 Hs.
   remember (TArrow V1 V2) as V.
   generalize dependent V2. generalize dependent V1.
-  (* FILL IN HERE *) Admitted.
+  induction Hs; intros.
+  - exists V1. exists V2. split. assumption. split. apply S_Refl. apply S_Refl.
+  - apply IHHs2 in HeqV. inversion HeqV. inversion H.
+    assert (V1 <: x). { apply proj2 in H0. apply proj1 in H0. assumption. }
+    assert (x0 <: V2). { apply proj2 in H0. apply proj2 in H0. assumption.  }
+    apply proj1 in H0.
+    apply IHHs1 in H0.
+    inversion H0. inversion H3.
+    exists x1. exists x2. split. 
+    + apply proj1 in H4. assumption.
+    + split.
+        -- apply proj2 in H4. apply proj1 in H4. apply (S_Trans V1 x x1). assumption. assumption.
+        -- apply proj2 in H4. apply proj2 in H4. apply (S_Trans x2 x0 V2). assumption. assumption.
+  - inversion HeqV.
+  - inversion HeqV. subst.
+    exists S1. exists S2. split. reflexivity.
+    split. assumption. assumption.
+ Qed. 
 (** [] *)
 
 (* ================================================================= *)
@@ -993,14 +966,58 @@ Proof with eauto.
     tells us the possible "canonical forms" (i.e., values) of function
     type. *)
 
+
 (** **** Exercise: 3 stars, optional (canonical_forms_of_arrow_types)  *)
+Lemma tmp : forall Gamma T1 T2,
+    ~(Gamma |- ttrue \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember ttrue as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp1 : forall Gamma T1 T2,
+    ~(Gamma |- tfalse \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tfalse as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp2 : forall Gamma T1 T2,
+    ~(Gamma |- tunit \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tunit as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+
 Lemma canonical_forms_of_arrow_types : forall Gamma s T1 T2,
   Gamma |- s \in (TArrow T1 T2) ->
   value s ->
   exists x, exists S1, exists s2,
      s = tabs x S1 s2.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  induction s; intros; try (inversion H0).
+  - subst. exists i. exists t. exists s. reflexivity.
+  - apply tmp in H. inversion H.
+  - apply tmp1 in H. inversion H.
+  - apply tmp2 in H. inversion H.
+Qed.   
+     
 (** [] *)
 
 (** Similarly, the canonical forms of type [Bool] are the constants
@@ -1606,20 +1623,868 @@ Inductive tm : Type :=
 
 (* Copy and extend and/or fill in required definitions and lemmas
    here. *)
+ Fixpoint subst (x:id) (s:tm)  (t:tm) : tm :=
+    match t with
+    | tvar y =>
+        if beq_id x y then s else t
+    | tabs y T t1 =>
+        tabs y T (if beq_id x y then t1 else (subst x s t1))
+    | tapp t1 t2 =>
+        tapp (subst x s t1) (subst x s t2)
+    | ttrue =>
+        ttrue
+    | tfalse =>
+        tfalse
+    | tif t1 t2 t3 =>
+        tif (subst x s t1) (subst x s t2) (subst x s t3)
+    | tunit =>
+        tunit 
+    | tpair t1 t2 => tpair (subst x s t1) (subst x s t2)
+    | tfst t => tfst (subst x s t)
+    | tsnd t => tsnd (subst x s t)
+    end.
+  
+  Notation "'[' x ':=' s ']' t" := (subst x s t) (at level 20).
+  
+  (* ----------------------------------------------------------------- *)
+  (** *** Reduction *)
+  
+  (** Likewise the definitions of the [value] property and the [step]
+      relation. *)
+  
+  Inductive value : tm -> Prop :=
+    | v_abs : forall x T t,
+        value (tabs x T t)
+    | v_true :
+        value ttrue
+    | v_false :
+        value tfalse
+    | v_unit :
+        value tunit
+    | v_pair : forall t1 t2,
+        value t1 ->
+        value t2 ->
+        value (tpair t1 t2)
+  .
+  
+  Hint Constructors value.
+  
+  Reserved Notation "t1 '==>' t2" (at level 40).
+  
+  Inductive step : tm -> tm -> Prop :=
+    | ST_AppAbs : forall x T t12 v2,
+           value v2 ->
+           (tapp (tabs x T t12) v2) ==> [x:=v2]t12
+    | ST_App1 : forall t1 t1' t2,
+           t1 ==> t1' ->
+           (tapp t1 t2) ==> (tapp t1' t2)
+    | ST_App2 : forall v1 t2 t2',
+           value v1 ->
+           t2 ==> t2' ->
+           (tapp v1 t2) ==> (tapp v1  t2')
+    | ST_IfTrue : forall t1 t2,
+        (tif ttrue t1 t2) ==> t1
+    | ST_IfFalse : forall t1 t2,
+        (tif tfalse t1 t2) ==> t2
+    | ST_If : forall t1 t1' t2 t3,
+        t1 ==> t1' ->
+        (tif t1 t2 t3) ==> (tif t1' t2 t3)
+    | ST_Pair1 : forall t1 t1' t2,
+        t1 ==> t1' ->
+        (tpair t1 t2) ==> (tpair t1' t2)
+    | ST_Pair2 : forall t1 t2 t2',
+        value t1 ->
+        t2 ==> t2' ->
+        (tpair t1 t2) ==> (tpair t1 t2')
+    | ST_Fst1 : forall t t',
+        t ==> t' ->
+        (tfst t) ==> (tfst t')
+    | ST_FstPair : forall t1 t2,
+        value t1 ->
+        value t2 ->
+        (tfst (tpair t1 t2)) ==> t1
+    | ST_Snd1 : forall t t',
+        t ==> t' ->
+        (tsnd t) ==> (tsnd t')
+    | ST_SndPair : forall t1 t2,
+        value t1 ->
+        value t2 ->
+        (tsnd (tpair t1 t2)) ==> t2
+
+  where "t1 '==>' t2" := (step t1 t2).
+
+  Reserved Notation "T '<:' U" (at level 40).
+
+Inductive subtype : ty -> ty -> Prop :=
+  | S_Refl : forall T,
+      T <: T
+  | S_Trans : forall S U T,
+      S <: U ->
+      U <: T ->
+      S <: T
+  | S_Top : forall S,
+      S <: TTop
+  | S_Arrow : forall S1 S2 T1 T2,
+      T1 <: S1 ->
+      S2 <: T2 ->
+      (TArrow S1 S2) <: (TArrow T1 T2)
+  | S_Prod : forall T1 T2 U1 U2,
+      T1 <: U1 ->
+      T2 <: U2 ->
+      (TProd T1 T2) <: (TProd U1 U2)
+where "T '<:' U" := (subtype T U).
+Hint Constructors step.
+
+Definition context := partial_map ty.
+
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+
+Inductive has_type : context -> tm -> ty -> Prop :=
+  (* Same as before *)
+  | T_Var : forall Gamma x T,
+      Gamma x = Some T ->
+      Gamma |- (tvar x) \in T
+  | T_Abs : forall Gamma x T11 T12 t12,
+      (update Gamma x T11) |- t12 \in T12 ->
+      Gamma |- (tabs x T11 t12) \in (TArrow T11 T12)
+  | T_App : forall T1 T2 Gamma t1 t2,
+      Gamma |- t1 \in (TArrow T1 T2) ->
+      Gamma |- t2 \in T1 ->
+      Gamma |- (tapp t1 t2) \in T2
+  | T_True : forall Gamma,
+       Gamma |- ttrue \in TBool
+  | T_False : forall Gamma,
+       Gamma |- tfalse \in TBool
+  | T_If : forall t1 t2 t3 T Gamma,
+       Gamma |- t1 \in TBool ->
+       Gamma |- t2 \in T ->
+       Gamma |- t3 \in T ->
+       Gamma |- (tif t1 t2 t3) \in T
+  | T_Unit : forall Gamma,
+      Gamma |- tunit \in TUnit
+  (* New rule of subsumption *)
+  | T_Sub : forall Gamma t S T,
+      Gamma |- t \in S ->
+      S <: T ->
+      Gamma |- t \in T
+  | T_Pair : forall Gamma t1 T1 t2 T2,
+      Gamma |- t1 \in T1 ->
+      Gamma |- t2 \in T2 ->
+      Gamma |- (tpair t1 t2) \in (TProd T1 T2)
+  | T_Fst : forall Gamma t T1 T2,
+      Gamma |- t \in (TProd T1 T2) ->
+      Gamma |- (tfst t) \in T1
+  | T_Snd : forall Gamma t T1 T2,
+      Gamma |- t \in (TProd T1 T2) ->
+      Gamma |- (tsnd t) \in T2
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
+
+Hint Constructors has_type.
+
+(** The following hints help [auto] and [eauto] construct typing
+    derivations.  (See chapter [UseAuto] for more on hints.) *)
+
+Hint Extern 2 (has_type _ (tapp _ _) _) =>
+  eapply T_App; auto.
+Hint Extern 2 (_ = _) => compute; reflexivity.
+
+Lemma sub_inversion_Bool : forall U,
+     U <: TBool ->
+       U = TBool.
+Proof with auto.
+  intros U Hs.
+  remember TBool as V.
+  induction Hs.
+  - reflexivity.
+  - subst. assert (TBool = TBool). { reflexivity. } apply IHHs2 in H. rewrite <- H. apply IHHs1 in H. assumption.
+  - inversion HeqV.
+  - inversion HeqV.
+  - inversion HeqV.
+Qed.  
+
+(** **** Exercise: 3 stars, optional (sub_inversion_arrow)  *)
+Lemma sub_inversion_arrow : forall U V1 V2,
+     U <: (TArrow V1 V2) ->
+     exists U1, exists U2,
+       U = (TArrow U1 U2) /\ (V1 <: U1) /\ (U2 <: V2).
+Proof with eauto.
+  intros U V1 V2 Hs.
+  remember (TArrow V1 V2) as V.
+  generalize dependent V2. generalize dependent V1.
+  induction Hs; intros.
+  - exists V1. exists V2. split. assumption. split. apply S_Refl. apply S_Refl.
+  - apply IHHs2 in HeqV. inversion HeqV. inversion H.
+    assert (V1 <: x). { apply proj2 in H0. apply proj1 in H0. assumption. }
+    assert (x0 <: V2). { apply proj2 in H0. apply proj2 in H0. assumption.  }
+    apply proj1 in H0.
+    apply IHHs1 in H0.
+    inversion H0. inversion H3.
+    exists x1. exists x2. split. 
+    + apply proj1 in H4. assumption.
+    + split.
+        -- apply proj2 in H4. apply proj1 in H4. apply (S_Trans V1 x x1). assumption. assumption.
+        -- apply proj2 in H4. apply proj2 in H4. apply (S_Trans x2 x0 V2). assumption. assumption.
+  - inversion HeqV.
+  - inversion HeqV. subst.
+    exists S1. exists S2. split. reflexivity.
+    split. assumption. assumption.
+  - inversion HeqV.
+ Qed. 
+Lemma tmp : forall Gamma T1 T2,
+    ~(Gamma |- ttrue \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember ttrue as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp1 : forall Gamma T1 T2,
+    ~(Gamma |- tfalse \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tfalse as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp2 : forall Gamma T1 T2,
+    ~(Gamma |- tunit \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tunit as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_arrow in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TArrow T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp3 : forall Gamma t1 t2 T1 T2,
+    ~(Gamma |- (tpair t1 t2) \in (TArrow T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember (tpair t1 t2) as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply IHhas_type. reflexivity. apply (T_Sub Gamma (tpair t1 t2) S (TArrow T1 T2)). assumption.
+      apply (S_Trans S T (TArrow T1 T2)). assumption. assumption.
+      apply (S_Trans S T (TArrow T1 T2)). assumption. assumption.
+
+    - subst. apply sub_inversion_arrow in H1.
+      inversion H1. inversion H0. apply proj1 in H2. inversion H2.
+Qed.
+
+ Lemma canonical_forms_of_arrow_types : forall Gamma s T1 T2,
+  Gamma |- s \in (TArrow T1 T2) ->
+  value s ->
+  exists x, exists S1, exists s2,
+     s = tabs x S1 s2.
+Proof with eauto.
+  induction s; intros; try (inversion H0).
+  - subst. exists i. exists t. exists s. reflexivity.
+  - apply tmp in H. inversion H.
+  - apply tmp1 in H. inversion H.
+  - apply tmp2 in H. inversion H.
+  - apply tmp3 in H. inversion H. 
+Qed.   
+
+Lemma canonical_forms_of_Bool : forall Gamma s,
+  Gamma |- s \in TBool ->
+  value s ->
+  (s = ttrue \/ s = tfalse).
+Proof with eauto.
+  intros Gamma s Hty Hv.
+  remember TBool as T.
+  induction Hty; try solve_by_invert...
+  - (* T_Sub *)
+    subst. apply sub_inversion_Bool in H. subst...
+Qed.
+Lemma sub_inversion_Prod: forall U V1 V2,
+     U <: (TProd V1 V2) ->
+     exists U1, exists U2,
+       U = (TProd U1 U2) /\ (U1 <: V1) /\ (U2 <: V2).
+Proof with eauto.
+  intros U V1 V2 Hs.
+  remember (TProd V1 V2) as V.
+  generalize dependent V2. generalize dependent V1.
+  induction Hs; intros.
+  - exists V1. exists V2. split. assumption. split. apply S_Refl. apply S_Refl.
+  - apply IHHs2 in HeqV. inversion HeqV. inversion H.
+    assert (x <: V1). { apply proj2 in H0. apply proj1 in H0. assumption. }
+    assert (x0 <: V2). { apply proj2 in H0. apply proj2 in H0. assumption.  }
+    apply proj1 in H0.
+    apply IHHs1 in H0.
+    inversion H0. inversion H3.
+    exists x1. exists x2. split. 
+    + apply proj1 in H4. assumption.
+    + split.
+        -- apply proj2 in H4. apply proj1 in H4. apply (S_Trans x1 x V1). assumption. assumption.
+        -- apply proj2 in H4. apply proj2 in H4. apply (S_Trans x2 x0 V2). assumption. assumption.
+  - inversion HeqV.
+  - inversion HeqV.
+  - inversion HeqV.  subst.
+    exists T1. exists T2. split. reflexivity.
+    split. assumption. assumption.
+ Qed. 
+Lemma tmp4 : forall Gamma i t s T1 T2,
+    ~(Gamma |- (tabs i t s) \in (TProd T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember (tabs i t s) as T.
+    remember (TProd T1 T2) as Trua.
+    induction H0; try (inversion HeqT).
+    - subst. apply sub_inversion_Prod in H1. inversion H1. inversion H2.
+      apply proj1 in H3. inversion H3.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TProd T1 T2)).
+      assumption. assumption. 
+Qed.
+Lemma tmp5 : forall Gamma T1 T2,
+    ~(Gamma |- ttrue \in (TProd T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember ttrue as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_Prod in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TProd T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp6 : forall Gamma T1 T2,
+    ~(Gamma |- tfalse \in (TProd T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tfalse as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_Prod in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TProd T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma tmp7 : forall Gamma T1 T2,
+    ~(Gamma |- tunit \in (TProd T1 T2)).
+Proof.
+    unfold not. intros.
+    inversion H. subst.
+    remember tunit as t.
+    induction H0; try (inversion Heqt).
+    - subst. apply sub_inversion_Prod in H1. inversion H1. inversion H0.
+      apply proj1 in H2. inversion H2.
+    - subst. apply IHhas_type. reflexivity. assumption. apply (S_Trans S T (TProd T1 T2)).
+      assumption. assumption.
+Qed.
+Lemma canonical_forms_of_Prod : forall Gamma s T1 T2,
+  Gamma |- s \in (TProd T1 T2) ->
+  value s ->
+  exists t1 t2, s = tpair t1 t2.
+Proof with eauto.
+    induction s; intros; try (inversion H0).
+    - subst. apply tmp4 in H. inversion H.
+    - subst. apply tmp5 in H. inversion H.
+    - subst. apply tmp6 in H. inversion H.
+    - subst. apply tmp7 in H. inversion H.
+    - subst. exists s1. exists s2. reflexivity.
+Qed.
 
 Theorem progress : forall t T,
      empty |- t \in T ->
      value t \/ exists t', t ==> t'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+    intros t T Ht.
+  remember empty as Gamma.
+  revert HeqGamma.
+  induction Ht;
+    intros HeqGamma; subst...
+  - (* T_Var *)
+    inversion H.
+  - left. apply v_abs.
+  - (* T_App *)
+    right.
+    destruct IHHt1; subst...
+    + (* t1 is a value *)
+      destruct IHHt2; subst...
+      reflexivity. reflexivity. reflexivity.
+    + (* t1 steps *)
+      destruct IHHt2; subst...
+      reflexivity. 
+      assert ( exists x, exists S1, exists s2, t1 = tabs x S1 s2).
+      apply (canonical_forms_of_arrow_types empty t1 T1 T2).
+      assumption. assumption.
+      inversion H1. inversion H2. inversion H3.
+      exists ([x := t2] x1). subst. apply ST_AppAbs. assumption.
+      inversion H0.
+      exists (tapp t1 x). apply ST_App2. assumption. assumption.
+    + inversion H. exists (tapp x t2). apply ST_App1. assumption.
+  - left. apply v_true.
+  - left. apply v_false.
+  - (* T_If *)
+    right.
+    destruct IHHt1.
+    + (* t1 is a value *) eauto.
+    + assert (t1 = ttrue \/ t1 = tfalse)
+        by (eapply canonical_forms_of_Bool; eauto).
+      inversion H0; subst... exists t2. apply ST_IfTrue.
+      exists t3. apply ST_IfFalse.
+    + inversion H. rename x into t1'. eauto.
+  - left. apply v_unit.
+  - apply IHHt. reflexivity.
+  - assert (value t2 \/ (exists t' : tm, t2 ==> t')). apply IHHt2. reflexivity.
+    assert (value t1 \/ (exists t' : tm, t1 ==> t')). apply IHHt1. reflexivity.
+    destruct H.
+    + destruct H0.  left. apply v_pair. assumption. assumption.
+      inversion H0. right. exists (tpair x t2). apply ST_Pair1. assumption.
+    + destruct H0. right. inversion H. exists (tpair t1 x). apply ST_Pair2. assumption. assumption.
+      right. inversion H0. exists (tpair x t2). apply ST_Pair1. assumption.
+  - assert (value t \/ (exists t' : tm, t ==> t')). apply IHHt. reflexivity.
+    destruct H.
+    apply canonical_forms_of_Prod in Ht. 
+    inversion Ht. inversion H0.
+    right. subst. exists x. apply ST_FstPair.
+    inversion H.
+    assumption. inversion H. assumption.
+    assumption. right. inversion H. exists (tfst x). apply ST_Fst1. assumption.
+  - assert (value t \/ (exists t' : tm, t ==> t')). apply IHHt. reflexivity.
+    destruct H.
+    apply canonical_forms_of_Prod in Ht. 
+    inversion Ht. inversion H0.
+    right. subst. exists x0. apply ST_SndPair.
+    inversion H.
+    assumption. inversion H. assumption.
+    assumption. right. inversion H. exists (tsnd x). apply ST_Snd1. assumption.
+Qed.
+
+Lemma typing_inversion_abs : forall Gamma x S1 t2 T,
+     Gamma |- (tabs x S1 t2) \in T ->
+     (exists S2, (TArrow S1 S2) <: T
+              /\ (update Gamma x S1) |- t2 \in S2).
+Proof with eauto.
+  intros Gamma x S1 t2 T H.
+  remember (tabs x S1 t2) as t.
+  induction H;
+    inversion Heqt; subst; intros; try solve_by_invert.
+  - (* T_Abs *)
+    exists T12... split. apply S_Refl. assumption.
+  - (* T_Sub *)
+    destruct IHhas_type as [S2 [Hsub Hty]]...
+    exists S2. split.
+    apply (S_Trans (TArrow S1 S2) S T). assumption. assumption. assumption.
+  Qed.
+
+(** Similarly... *)
+
+Lemma typing_inversion_var : forall Gamma x T,
+  Gamma |- (tvar x) \in T ->
+  exists S,
+    Gamma x = Some S /\ S <: T.
+Proof with eauto.
+  intros Gamma x T Hty.
+  remember (tvar x) as t.
+  induction Hty; intros;
+    inversion Heqt; subst; try solve_by_invert.
+  - (* T_Var *)
+    exists T... split. assumption. apply S_Refl.
+  - (* T_Sub *)
+    destruct IHHty as [U [Hctx HsubU]]... 
+    exists U. split. assumption. apply (S_Trans U S T). assumption. assumption.    
+Qed.
+
+Lemma typing_inversion_app : forall Gamma t1 t2 T2,
+  Gamma |- (tapp t1 t2) \in T2 ->
+  exists T1,
+    Gamma |- t1 \in (TArrow T1 T2) /\
+    Gamma |- t2 \in T1.
+Proof with eauto.
+  intros Gamma t1 t2 T2 Hty.
+  remember (tapp t1 t2) as t.
+  induction Hty; intros;
+    inversion Heqt; subst; try solve_by_invert.
+  - (* T_App *)
+    exists T1...
+  - (* T_Sub *)
+    destruct IHHty as [U1 [Hty1 Hty2]]...
+    exists U1.
+    split.
+    apply (T_Sub Gamma t1 (TArrow U1 S) (TArrow U1 T)).
+    assumption. apply S_Arrow. apply S_Refl. assumption. assumption.
+Qed.
+
+Lemma typing_inversion_true : forall Gamma T,
+  Gamma |- ttrue \in T ->
+  TBool <: T.
+Proof with eauto.
+  intros Gamma T Htyp. remember ttrue as tu.
+  induction Htyp;
+    inversion Heqtu; subst; intros...
+    apply S_Refl. apply (S_Trans TBool S T).
+    apply IHHtyp. reflexivity. assumption.
+Qed.
+
+Lemma typing_inversion_false : forall Gamma T,
+  Gamma |- tfalse \in T ->
+  TBool <: T.
+Proof with eauto.
+  intros Gamma T Htyp. remember tfalse as tu.
+  induction Htyp;
+    inversion Heqtu; subst; intros...
+    apply S_Refl. apply (S_Trans TBool S T).
+    apply IHHtyp. reflexivity. assumption.
+Qed.
+
+Lemma typing_inversion_if : forall Gamma t1 t2 t3 T,
+  Gamma |- (tif t1 t2 t3) \in T ->
+  Gamma |- t1 \in TBool
+  /\ Gamma |- t2 \in T
+  /\ Gamma |- t3 \in T.
+Proof with eauto.
+  intros Gamma t1 t2 t3 T Hty.
+  remember (tif t1 t2 t3) as t.
+  induction Hty; intros;
+    inversion Heqt; subst; try solve_by_invert.
+  - (* T_If *)
+    auto.
+  - (* T_Sub *)
+    destruct (IHHty H0) as [H1 [H2 H3]]...
+Qed.
+
+Lemma typing_inversion_unit : forall Gamma T,
+  Gamma |- tunit \in T ->
+    TUnit <: T.
+Proof with eauto.
+  intros Gamma T Htyp. remember tunit as tu.
+  induction Htyp;
+    inversion Heqtu; subst; intros...
+    apply S_Refl. apply (S_Trans TUnit S T).
+    apply IHHtyp. reflexivity. assumption.
+Qed.
+
+Lemma typing_inversion_pair : forall Gamma t1 t2 T,
+     Gamma |- (tpair t1 t2) \in T ->
+     (exists S1 S2, (TProd S1 S2) <: T
+              /\ Gamma |- (tpair t1 t2) \in (TProd S1 S2)).
+Proof.
+    intros Gamma t1 t2 T H.
+    remember (tpair t1 t2) as t.
+    induction H; try (inversion Heqt).
+    - subst. apply IHhas_type in H1. inversion H1. inversion H2.
+      exists x. exists x0. split.
+      + apply (S_Trans (TProd x x0) S T). apply proj1 in H3. assumption. assumption.
+      + apply proj2 in H3. assumption.
+    - subst. exists T1. exists T2. split. apply S_Refl.
+      apply T_Pair. assumption. assumption.
+Qed.
+
+Lemma typing_inversion_fst : forall Gamma t T,
+  Gamma |- (tfst t) \in T ->
+    (exists S1 S2, (S1 <: T) /\ Gamma |- t \in (TProd S1 S2)).
+Proof with eauto.
+    intros.
+    remember (tfst t) as tt.
+    induction H; try (inversion Heqtt).
+    - subst. apply IHhas_type in H1. inversion H1. inversion H2.
+      exists x. exists x0. split.
+      apply (S_Trans x S T). 
+      + apply proj1 in H3. assumption.
+      + assumption.
+      + apply proj2 in H3. assumption.
+    - subst. exists T1. exists T2. split. apply S_Refl. assumption.
+Qed.
+
+Lemma typing_inversion_snd : forall Gamma t T,
+  Gamma |- (tsnd t) \in T ->
+    (exists S1 S2, (S2 <: T) /\ Gamma |- t \in (TProd S1 S2)).
+Proof with eauto.
+    intros.
+    remember (tsnd t) as tt.
+    induction H; try (inversion Heqtt).
+    - subst. apply IHhas_type in H1. inversion H1. inversion H2.
+      exists x. exists x0. split.
+      apply (S_Trans x0 S T). 
+      + apply proj1 in H3. assumption.
+      + assumption.
+      + apply proj2 in H3. assumption.
+    - subst. exists T1. exists T2. split. apply S_Refl. assumption.
+Qed.
+(** The inversion lemmas for typing and for subtyping between arrow
+    types can be packaged up as a useful "combination lemma" telling
+    us exactly what we'll actually require below. *)
+
+Lemma abs_arrow : forall x S1 s2 T1 T2,
+  empty |- (tabs x S1 s2) \in (TArrow T1 T2) ->
+     T1 <: S1
+  /\ (update empty x S1) |- s2 \in T2.
+Proof with eauto.
+  intros x S1 s2 T1 T2 Hty.
+  apply typing_inversion_abs in Hty.
+  inversion Hty as [S2 [Hsub Hty1]].
+  apply sub_inversion_arrow in Hsub.
+  inversion Hsub as [U1 [U2 [Heq [Hsub1 Hsub2]]]].
+  inversion Heq; subst...  Qed.
+
+Lemma pair_prod : forall Gamma t1 t2 T1 T2,
+    Gamma |- (tpair t1 t2) \in (TProd T1 T2) ->
+    Gamma |- t1 \in T1 /\ Gamma |- t2 \in T2.
+Proof.
+    intros.
+    inversion H; subst.
+    - remember (tpair t1 t2) as t. induction H0; try (inversion Heqt).
+        + subst. split.
+            -- assert (Gamma |- t1 \in T1 /\ Gamma |- t2 \in T2). {
+                apply IHhas_type. reflexivity.
+                apply (T_Sub Gamma (tpair t1 t2) S (TProd T1 T2)). assumption.
+                apply (S_Trans S T (TProd  T1 T2)). assumption. assumption.
+                apply (S_Trans S T (TProd T1 T2)). assumption. assumption.
+            }
+            apply proj1 in H4. assumption.
+            -- assert (Gamma |- t1 \in T1 /\ Gamma |- t2 \in T2). {
+                apply IHhas_type. reflexivity.
+                apply (T_Sub Gamma (tpair t1 t2) S (TProd T1 T2)). assumption.
+                apply (S_Trans S T (TProd  T1 T2)). assumption. assumption.
+                apply (S_Trans S T (TProd T1 T2)). assumption. assumption.
+            }
+            apply proj2 in H4. assumption.
+      + subst. split.
+        -- apply (T_Sub Gamma t1 T0 T1). assumption. apply sub_inversion_Prod in H1.
+           inversion H1. inversion H0. assert (T0 = x). { apply proj1 in H2. inversion H2. reflexivity. }
+           subst. apply proj2 in H2. apply proj1 in H2. assumption.
+        --  apply (T_Sub Gamma t2 T3 T2). assumption. apply sub_inversion_Prod in H1.
+        inversion H1. inversion H0. assert (T3 = x0). { apply proj1 in H2. inversion H2. reflexivity. }
+        subst. apply proj2 in H2. apply proj2 in H2. assumption.
+    - split. assumption. assumption.
+Qed.
+
+
+(* ================================================================= *)
+(** ** Context Invariance *)
+
+(** The context invariance lemma follows the same pattern as in the
+    pure STLC. *)
+
+Inductive appears_free_in : id -> tm -> Prop :=
+  | afi_var : forall x,
+      appears_free_in x (tvar x)
+  | afi_app1 : forall x t1 t2,
+      appears_free_in x t1 -> appears_free_in x (tapp t1 t2)
+  | afi_app2 : forall x t1 t2,
+      appears_free_in x t2 -> appears_free_in x (tapp t1 t2)
+  | afi_abs : forall x y T11 t12,
+        y <> x  ->
+        appears_free_in x t12 ->
+        appears_free_in x (tabs y T11 t12)
+  | afi_if1 : forall x t1 t2 t3,
+      appears_free_in x t1 ->
+      appears_free_in x (tif t1 t2 t3)
+  | afi_if2 : forall x t1 t2 t3,
+      appears_free_in x t2 ->
+      appears_free_in x (tif t1 t2 t3)
+  | afi_if3 : forall x t1 t2 t3,
+      appears_free_in x t3 ->
+      appears_free_in x (tif t1 t2 t3)
+  | afi_pair : forall x t1 t2,
+      appears_free_in x t1 \/ appears_free_in x t2 ->
+      appears_free_in x (tpair t1 t2)
+  | afi_fst : forall x t,
+      appears_free_in x t ->
+      appears_free_in x (tfst t)
+  | afi_snd : forall x t,
+      appears_free_in x t ->
+      appears_free_in x (tsnd t)
+.
+
+Hint Constructors appears_free_in.
+
+Lemma context_invariance : forall Gamma Gamma' t S,
+     Gamma |- t \in S  ->
+     (forall x, appears_free_in x t -> Gamma x = Gamma' x)  ->
+     Gamma' |- t \in S.
+Proof with eauto.
+  intros. generalize dependent Gamma'.
+  induction H;
+    intros Gamma' Heqv...
+  - (* T_Var *)
+    apply T_Var... rewrite <- Heqv...
+  - (* T_Abs *)
+    apply T_Abs... apply IHhas_type. intros x0 Hafi.
+    unfold update, t_update. destruct (beq_idP x x0)...
+  - (* T_If *)
+    apply T_If...
+  - apply T_Pair. apply IHhas_type1.  intros.
+    assert (appears_free_in x (tpair t1 t2)). apply afi_pair. left. assumption.
+    apply Heqv in H2. assumption.
+    apply IHhas_type2. intros.
+    assert (appears_free_in x (tpair t1 t2)). apply afi_pair. right. assumption.
+    apply Heqv in H2. assumption.
+Qed.
+
+Lemma free_in_context : forall x t T Gamma,
+   appears_free_in x t ->
+   Gamma |- t \in T ->
+   exists T', Gamma x = Some T'.
+Proof with eauto.
+  intros x t T Gamma Hafi Htyp.
+  induction Htyp;
+      subst; inversion Hafi; subst...
+  - (* T_Abs *)
+    destruct (IHHtyp H4) as [T Hctx]. exists T.
+    unfold update, t_update in Hctx.
+    rewrite <- beq_id_false_iff in H2.
+    rewrite H2 in Hctx... 
+  - destruct H1.
+    + apply IHHtyp1 in H. assumption.
+    + apply IHHtyp2 in H. assumption.    
+Qed.
+
+(* ================================================================= *)
+(** ** Substitution *)
+
+(** The _substitution lemma_ is proved along the same lines as
+    for the pure STLC.  The only significant change is that there are
+    several places where, instead of the built-in [inversion] tactic,
+    we need to use the inversion lemmas that we proved above to
+    extract structural information from assumptions about the
+    well-typedness of subterms. *)
+
+Lemma substitution_preserves_typing : forall Gamma x U v t S,
+     (update Gamma x U) |- t \in S  ->
+     empty |- v \in U   ->
+     Gamma |- ([x:=v]t) \in S.
+Proof with eauto.
+  intros Gamma x U v t S Htypt Htypv.
+  generalize dependent S. generalize dependent Gamma.
+  induction t; intros; simpl.
+  - (* tvar *)
+    rename i into y.
+    destruct (typing_inversion_var _ _ _ Htypt)
+        as [T [Hctx Hsub]].
+    unfold update, t_update in Hctx.
+    destruct (beq_idP x y) as [Hxy|Hxy]; eauto;
+    subst.
+    inversion Hctx; subst. clear Hctx.
+    apply context_invariance with empty...
+    intros x Hcontra.
+    destruct (free_in_context _ _ S empty Hcontra)
+        as [T' HT']...
+    inversion HT'.
+  - (* tapp *)
+    destruct (typing_inversion_app _ _ _ _ Htypt)
+        as [T1 [Htypt1 Htypt2]].
+    eapply T_App...
+  - (* tabs *)
+    rename i into y. rename t into T1.
+    destruct (typing_inversion_abs _ _ _ _ _ Htypt)
+      as [T2 [Hsub Htypt2]].
+    apply T_Sub with (TArrow T1 T2)... apply T_Abs...
+    destruct (beq_idP x y) as [Hxy|Hxy].
+    + (* x=y *)
+      eapply context_invariance...
+      subst.
+      intros x Hafi. unfold update, t_update.
+      destruct (beq_id y x)...
+    + (* x<>y *)
+      apply IHt. eapply context_invariance...
+      intros z Hafi. unfold update, t_update.
+      destruct (beq_idP y z)...
+      subst.
+      rewrite <- beq_id_false_iff in Hxy. rewrite Hxy...
+  - (* ttrue *)
+      assert (TBool <: S)
+        by apply (typing_inversion_true _ _  Htypt)...
+  - (* tfalse *)
+      assert (TBool <: S)
+        by apply (typing_inversion_false _ _  Htypt)...
+  - (* tif *)
+    assert ((update Gamma x U) |- t1 \in TBool
+            /\ (update Gamma x U) |- t2 \in S
+            /\ (update Gamma x U) |- t3 \in S)
+      by apply (typing_inversion_if _ _ _ _ _ Htypt).
+    inversion H as [H1 [H2 H3]].
+    apply IHt1 in H1. apply IHt2 in H2. apply IHt3 in H3.
+    auto.
+  - (* tunit *)
+    assert (TUnit <: S)
+      by apply (typing_inversion_unit _ _  Htypt)...
+  - apply typing_inversion_pair in Htypt. inversion Htypt. inversion H.
+    apply (T_Sub Gamma (tpair ([x := v] t1) ([x := v] t2)) (TProd x0 x1) S).
+    + apply (T_Pair Gamma ([x := v] t1) x0 ([x := v] t2) x1). 
+     -- apply IHt1. apply proj2 in H0. apply pair_prod in H0. apply proj1 in H0.
+        assumption.
+    --  apply IHt2. apply proj2 in H0. apply pair_prod in H0. apply proj2 in H0.
+        assumption.
+    + apply proj1 in H0. assumption.
+  - apply typing_inversion_fst in Htypt. inversion Htypt. inversion H.
+    apply (T_Sub Gamma (tfst ([x := v] t)) x0 S).
+    + apply (T_Fst Gamma ([x := v] t) x0 x1). apply IHt.
+      apply proj2 in H0. assumption.
+    + apply proj1 in H0. assumption.
+  - apply typing_inversion_snd in Htypt. inversion Htypt. inversion H.
+  apply (T_Sub Gamma (tsnd ([x := v] t)) x1 S).
+  + apply (T_Snd Gamma ([x := v] t) x0 x1). apply IHt.
+    apply proj2 in H0. assumption.
+  + apply proj1 in H0. assumption.
+Qed.
 
 Theorem preservation : forall t t' T,
      empty |- t \in T  ->
      t ==> t'  ->
      empty |- t' \in T.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+    intros t t' T HT.
+    remember empty as Gamma. generalize dependent HeqGamma.
+    generalize dependent t'.
+    induction HT;
+      intros t' HeqGamma HE; subst; inversion HE; subst...
+    - (* T_App *)
+      inversion HE; subst...
+      + (* ST_AppAbs *)
+        destruct (abs_arrow _ _ _ _ _ HT1) as [HA1 HA2].
+        apply substitution_preserves_typing with T...
+      assumption. apply (T_Sub empty t2 T1 T). assumption. assumption.
+      + inversion H0.
+      + apply (T_App T1 T2 empty (tabs x T t12) t2'). assumption. 
+        apply IHHT2. reflexivity. assumption.
+    - apply (T_App T1 T2 empty t1' t2). apply IHHT1. reflexivity. assumption.
+      assumption.
+    - apply (T_App T1 T2 empty t1 t2'). assumption. apply IHHT2. reflexivity. assumption.
+    - assumption.
+    - assumption.
+    - apply (T_If). apply IHHT1. reflexivity. assumption. assumption. assumption.
+    - apply (T_Sub empty ([x := v2] t12) S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tapp t1' t2) S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tapp v1 t2') S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (t') S T). apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty t'  S T). apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tif t1' t2 t3) S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tpair t1' t2) S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tpair t1 t2') S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tfst t'0) S T).
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty t' S T). 
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty (tsnd t'0) S T). 
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Sub empty t' S T). 
+      apply IHHT. reflexivity. assumption. assumption.
+    - apply (T_Pair). apply IHHT1. reflexivity. assumption. assumption.
+    - apply T_Pair. assumption. apply  IHHT2. reflexivity. assumption.
+    - apply (T_Fst empty t'0 T1 T2). apply IHHT. reflexivity. assumption.
+    - apply pair_prod in HT. apply proj1 in HT. assumption.
+    - apply (T_Snd empty t'0 T1 T2). apply IHHT. reflexivity. assumption.
+    - apply pair_prod in HT. apply proj2 in HT. assumption.  
+  Qed.
 
 End ProductExtension.  
 
